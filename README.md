@@ -3,7 +3,6 @@
 ## Usage
 
 ```bash
-
 $ r2 --init
 
 $ r2 --add name path # backup file
@@ -13,10 +12,27 @@ $ r2 -q file # quick add (uses filename as name)
 $ r2 -d file # check if file differs from backup
 
 $ r2 -r file 1 # restore file from backup
-
 ```
 
-# TODO
+## How it stores data
+
+`~/.r2/defs.json:`
+```json
+"test": {
+    "path": "/tmp/test",
+    "latest": 1,
+    "generations": {
+        "1": "4e1243bd22c66e76c2ba9eddc1f91394e57f9f83"
+    }
+}
+```
+
+```bash
+$cat ~/.r2/store/4e1243bd22c66e76c2ba9eddc1f91394e57f9f83 
+test
+```
+
+## TODO
 
 - prevent collision in filename
 - list files
