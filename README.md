@@ -16,7 +16,7 @@ $ r2 -r file 1 # restore file from backup
 
 ## How it stores data
 
-`~/.r2/defs.json:`
+files are listed in `~/.r2/defs.json:`
 ```json
 "test": {
     "path": "/tmp/test",
@@ -28,7 +28,7 @@ $ r2 -r file 1 # restore file from backup
 ```
 
 ```bash
-$cat ~/.r2/store/4e1243bd22c66e76c2ba9eddc1f91394e57f9f83 
+$ cat ~/.r2/store/4e1243bd22c66e76c2ba9eddc1f91394e57f9f83 
 test
 ```
 
