@@ -51,10 +51,10 @@ def hash_file(filename):
 
 def handle_error(
         error_message: str,
-        level = logging.error,
+        showLevel = logging.error,
         fatal: bool = False,
         errorCode: int = 1) -> None:
-    level(error_message)
+    showLevel(error_message)
     if fatal:
         exit(errorCode)
 
@@ -120,6 +120,21 @@ def restore(filename: str, generation: int, backup_first: bool = True) -> str:
     shutil.copyfile(get_file_at_gen(filename, generation, defs), path)
     return "Restored file " + filename + " from backup " + str(generation)
 
+def multi_arg(arg_list):
+    amount = len(arg_list)
+    filename = arg_list[0]
+    if amount == 1:
+        gen = get_latest_gen(filename)
+    elif amount == 2:
+        try:
+            gen = int(arg_list[1])
+        except ValueError:
+            handle_error(error_message = "Generation must be an integer", fatal = True)
+    elif amount > 2:
+        handle_error(error_message = "Too many arguments", fatal = True)
+    return (filename, gen)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description = "",
@@ -131,8 +146,10 @@ def main() -> None:
                         metavar = ('<name>', '<path>'), help = "Add file to r2")
     parser.add_argument('-q', '--quick-add', nargs = 1, type = str, default = '',
                         metavar = ('<file>'), help = "quick add file")
-    parser.add_argument('-d', '--diff', nargs = '+', metavar = '<file> <generation>')
-    parser.add_argument('-r', '--restore', nargs = 2, type = str,  metavar = '<file> <generation>')
+    parser.add_argument('-d', '--diff', nargs = '+', metavar = '', help = '<file> <generation> (default = latest)')
+    parser.add_argument('-r', '--restore', nargs = '+', metavar = '', help = '<file> <generation> (default = latest)')
+    parser.add_argument('-n', '--no_backup-first', action = 'store_false',
+                        help = "backup before overwriting file with restore")
 
     args = parser.parse_args()
 
@@ -144,21 +161,16 @@ def main() -> None:
     elif args.quick_add != '':
         add_file(args.quick_add[0], os.path.join(os.getcwd(), args.quick_add[0]))
     elif args.diff != None:
-        if len(args.diff) == 1:
-            gen = get_latest_gen(args.diff[0])
-        elif len(args.diff) == 2:
-            try:
-                gen = int(args.diff[1])
-            except ValueError:
-                handle_error("Usage: r2 --diff <file> <generation>", fatal = True)
-        elif len(args.diff) > 2:
-            handle_error("Usage: r2 --diff <file> <generation>", fatal = True)
-        if diff(args.diff[0], gen):
-            print(args.diff[0], "matches backed up version", gen)
+        filename, gen = multi_arg(args.diff)
+        if diff(filename, gen):
+            print(filename, "matches backed up version", gen)
         else:
-            print(args.diff[0], "differs from backed up version", gen)
+            print(filename, "differs from backed up version", gen)
+    
     elif args.restore != None:
-        print(restore(args.restore[0], args.restore[1]))
+        filename, gen = multi_arg(args.restore)
+        print(restore(filename, gen, args.no_backup_first))
+
     else:
         print("try --help")
 
