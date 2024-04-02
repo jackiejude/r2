@@ -1,5 +1,7 @@
 # r2 (WIP)
 
+# [Moved to SourceHut](https://git.sr.ht/~jackiejude/r2)
+
 ## Usage
 
 ```bash
