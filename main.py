@@ -39,6 +39,19 @@ def file_read(filename):
     f = open(filename, "r")
     return f.read()
 
+def get_max_length(l: list) -> int:
+    max = l[0]
+    for i in l:
+        if len(i) > max:
+            max = len(i)
+    return max
+
+def pad(string: str, length: int) -> str:
+    strlen = len(string)
+    if length > strlen:
+        return string + (" " * (length - strlen))
+    return string
+
 def hash_file(filename):
     BLOCKSIZE = 65536
     hasher = hashlib.sha1()
@@ -120,6 +133,18 @@ def restore(filename: str, generation: int, backup_first: bool = True) -> str:
     shutil.copyfile(get_file_at_gen(filename, generation, defs), path)
     return "Restored file " + filename + " from backup " + str(generation)
 
+def table(headers, list1, list2) -> str:
+    max_length1 = get_max_length(list1)
+    max_length2 = get_max_length(list2)
+    result = "|" + pad(header[0] + max_length1) + "|" + pad(header[1] + max_length2)
+    
+def list_files() -> str:
+    file_list = ""
+    defs = json.loads(file_read(DEFS))
+    for a, b in defs.items():
+        file_list += "| " + a + " | " + b['path'] + " |\n"
+    return file_list
+
 def multi_arg(arg_list):
     amount = len(arg_list)
     filename = arg_list[0]
@@ -136,30 +161,26 @@ def multi_arg(arg_list):
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description = "",
-        epilog = ""
-    )
+    parser = argparse.ArgumentParser(description = "", epilog = "" )
 
     parser.add_argument('--init', action='store_true', help='Setup r2')
-    parser.add_argument('-a', '--add', nargs = 2, type = str, default = '',
-                        metavar = ('<name>', '<path>'), help = "Add file to r2")
-    parser.add_argument('-q', '--quick-add', nargs = 1, type = str, default = '',
-                        metavar = ('<file>'), help = "quick add file")
+    parser.add_argument('-a', '--add', nargs = 2, type = str, default = '', metavar = ('<name>', '<path>'), help = "Add file to r2")
+    parser.add_argument('-q', '--quick-add', nargs = 1, type = str, default = '', metavar = ('<file>'), help = "quick add file")
     parser.add_argument('-d', '--diff', nargs = '+', metavar = '', help = '<file> <generation> (default = latest)')
     parser.add_argument('-r', '--restore', nargs = '+', metavar = '', help = '<file> <generation> (default = latest)')
-    parser.add_argument('-n', '--no_backup-first', action = 'store_false',
-                        help = "backup before overwriting file with restore")
+    parser.add_argument('-n', '--no_backup-first', action = 'store_false', help = "backup before overwriting file with restore")
+    parser.add_argument('-l', '--list-files', action = 'store_true', help = "List backed up files")
 
     args = parser.parse_args()
 
     if args.init:
         init()
-        exit()
     elif args.add != '':
         add_file(args.add[0], args.add[1])
     elif args.quick_add != '':
         add_file(args.quick_add[0], os.path.join(os.getcwd(), args.quick_add[0]))
+    elif args.list_files:
+        print(list_files())
     elif args.diff != None:
         filename, gen = multi_arg(args.diff)
         if diff(filename, gen):
