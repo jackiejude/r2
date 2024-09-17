@@ -39,16 +39,12 @@ test
 - prevent collision in filename
 - list files
 - list history of individual file
-- multiple storage locations
-- all existing commands, but recursively on directories
 - rm - remove from defs
-- purge - remove all instances of file from store
-    - how should past generations handle it?
 - garbage collection
-- store only latest x versions of thing
+- prune: delete all but latest backup of a file
 - status (all files diff)
-- export history of file
 - target symlinked outside
+- target added to PATH
 
 ## Future commands
 
