@@ -36,15 +36,8 @@ test
 
 ## TODO
 
-- prevent collision in filename
-- list files
-- list history of individual file
-- rm - remove from defs
-- garbage collection
-- prune: delete all but latest backup of a file
-- status (all files diff)
-- target symlinked outside
-- target added to PATH
+- better handling of missing files (see issue 1)
+- prevent collision in filename when using quick add and regular add
 
 ## Future commands
 

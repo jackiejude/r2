@@ -38,12 +38,6 @@ def file_read(filename: Path) -> str:
     with open(filename, "r") as f:
         return f.read()
 
-def get_max_length(l: List[str]) -> int:
-    return max(len(s) for s in l) if l else 0
-
-def pad(string: str, length: int) -> str:
-    return string.ljust(length)
-
 def hash_file(filename: Path) -> str:
     hasher = hashlib.sha256()
     block_size = 65536
@@ -179,24 +173,24 @@ def garbage_collect() -> str:
         if file.name not in valid_hashes:
             file.unlink()
             deleted_count += 1
-    
+
     return f"Garbage collection complete. Deleted {deleted_count} unused file(s)."
 
 def quick_add(filename: str) -> str:
     path = Path.cwd() / filename
     if not path.exists():
         handle_error(f"No such file: {path}", fatal=True)
-    
+
     defs = json.loads(file_read(DEFS))
     base_name = path.stem
     extension = path.suffix
     new_name = base_name
     counter = 1
-    
+
     while new_name in defs:
         new_name = f"{base_name}-{counter}{extension}"
         counter += 1
-    
+
     add_file(new_name, path)
     return f"Added file {path} as {new_name}"
 
@@ -204,15 +198,15 @@ def list_file_history(filename: str) -> str:
     defs = json.loads(file_read(DEFS))
     if filename not in defs:
         handle_error(f"File does not exist: {filename}", fatal=True)
-    
+
     file_info = defs[filename]
     history = [f"File: {filename}", f"Path: {file_info['path']}", ""]
     history.append("| Generation | Hash |")
     history.append("|------------|------|")
-    
+
     for gen, hash_value in sorted(file_info['generations'].items(), key=lambda x: int(x[0])):
         history.append(f"| {gen:^10} | {hash_value} |")
-    
+
     return "\n".join(history)
 
 def prune(filename: str, all_files: bool = False) -> str:
@@ -230,13 +224,13 @@ def prune(filename: str, all_files: bool = False) -> str:
         latest_gen = str(file_info['latest'])
         latest_hash = file_info['generations'][latest_gen]
         old_generations = [gen for gen in file_info['generations'] if gen != latest_gen]
-        
+
         for gen in old_generations:
             del file_info['generations'][gen]
             pruned_count += 1
-        
+
         file_info['generations'] = {latest_gen: latest_hash}
-    
+
     file_overwrite(DEFS, json.dumps(defs, indent=4))
     print(garbage_collect())
     return f"Pruned {pruned_count} old generation(s)."
@@ -245,35 +239,39 @@ def status() -> str:
     defs = json.loads(file_read(DEFS))
     if not defs:
         return "No files in the backup system."
-    
+
     name_width = max(len(name) for name in defs.keys())
-    status_width = len("Not Changed")
-    
+    status_width = len("Source File Missing")
+
     header = f"| {'Filename':<{name_width}} | {'Status':<{status_width}} |"
     separator = f"|{'-' * (name_width + 2)}|{'-' * (status_width + 2)}|"
-    
+
     status_list = [header, separator]
-    for name, info in defs.items():
-        latest_gen = str(info['latest'])
-        latest_hash = info['generations'][latest_gen]
-        current_hash = hash_file(Path(info['path']))
-        status = "Not Changed" if current_hash == latest_hash else "Changed"
+    for name, file_info in defs.items():
+        path = Path(file_info['path'])
+        if not path.exists():
+            status = "Source File Missing"
+        else:
+            current_hash = hash_file(path)
+            latest_gen = str(file_info['latest'])
+            latest_hash = file_info['generations'][latest_gen]    
+            status = "Not Changed" if current_hash == latest_hash else "Changed"
         status_list.append(f"| {name:<{name_width}} | {status:<{status_width}} |")
-    
+
     return "\n".join(status_list)
 
 def link_file(filename: str, target_path: str) -> str:
     defs = json.loads(file_read(DEFS))
     if filename not in defs:
         handle_error(f"File does not exist in r2: {filename}", fatal=True)
-    
+
     target = Path(target_path).expanduser().resolve()
     if target.exists():
         handle_error(f"Target path already exists: {target}", fatal=True)
-    
+
     latest_gen = str(defs[filename]['latest'])
     source = get_file_at_gen(filename, int(latest_gen), defs)
-    
+
     target.symlink_to(source)
     return f"Linked {filename} to {target}"
 
@@ -281,14 +279,14 @@ def install_file(filename: str) -> str:
     defs = json.loads(file_read(DEFS))
     if filename not in defs:
         handle_error(f"File does not exist in r2: {filename}", fatal=True)
-    
+
     latest_gen = str(defs[filename]['latest'])
     source = get_file_at_gen(filename, int(latest_gen), defs)
     target = BIN / filename
-    
+
     if target.exists():
         handle_error(f"File already exists in bin: {target}", fatal=True)
-    
+
     target.symlink_to(source)
     target.chmod(target.stat().st_mode | 0o111)  # Make executable
     return f"Installed {filename} to {target}"
