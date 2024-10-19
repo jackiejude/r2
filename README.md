@@ -1,6 +1,5 @@
 # r2 (WIP)
 
-# [Moved to SourceHut](https://git.sr.ht/~jackiejude/r2)
 
 ## Usage
 
@@ -36,5 +35,6 @@ test
 
 ## TODO
 
-- better handling of missing files (see issue 1)
-- prevent adding duplicate files
+- [better handling of missing files](https://github.com/jackiejude/r2/issues/1)
+- [prevent creating a generation with no changes](https://github.com/jackiejude/r2/blob/ec7c697e81a70ef7922bdcba5438f33bf74e6e46/main.py#L90)
+- [prevent adding duplicate files](https://github.com/jackiejude/r2/blob/ec7c697e81a70ef7922bdcba5438f33bf74e6e46/main.py#L123)
