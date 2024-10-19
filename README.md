@@ -37,19 +37,4 @@ test
 ## TODO
 
 - better handling of missing files (see issue 1)
-- prevent collision in filename when using quick add and regular add
-
-## Future commands
-
-```bash
-
-r2 --list
-
-r2 --list-backups file
-
-# basic dotfiles management
-r2 --link vimrc ~/.vimrc # the link is to a version of vimrc in .r2/store
-
-# scripts
-r2 --add-bin foo.py # adds foo.py to PATH
-```
+- prevent adding duplicate files
