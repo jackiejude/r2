@@ -36,5 +36,9 @@ test
 ## TODO
 
 - [better handling of missing files](https://github.com/jackiejude/r2/issues/1)
-- [prevent creating a generation with no changes](https://github.com/jackiejude/r2/blob/ec7c697e81a70ef7922bdcba5438f33bf74e6e46/main.py#L90)
-- [prevent adding duplicate files](https://github.com/jackiejude/r2/blob/ec7c697e81a70ef7922bdcba5438f33bf74e6e46/main.py#L123)
+- --update command (update an already added files)
+- --update-all
+- multiple storage locations
+- directory support
+- store only X latest versions of a file
+- export history of a file

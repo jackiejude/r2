@@ -17,7 +17,7 @@ STORE = R2DIR / "store"
 DEFS = R2DIR / "defs.json"
 BIN = R2DIR / "bin"
 
-log_format = "%(levelname)s [%(asctime)s] - %(message)s"
+log_format = "%(levelname)s: %(message)s"
 logging.basicConfig(filename='r2.log', encoding='utf-8', level=logging.INFO, format=log_format)
 logger = logging.getLogger()
 console_handler = logging.StreamHandler()
@@ -26,17 +26,6 @@ console_handler.setFormatter(logging.Formatter(log_format))
 logger.addHandler(console_handler)
 
 verbose = False
-
-def mkdir(d: Path) -> None:
-    if verbose:
-        print(f"Creating directory {d}")
-    d.mkdir(parents=True, exist_ok=True)
-
-def file_append(filename: Path, contents: str) -> None:
-    if verbose:
-        print(f"Updating file {filename}")
-    with open(filename, "a") as f:
-        f.write(contents)
 
 def file_overwrite(filename: Path, contents: str) -> None:
     if verbose:
@@ -63,8 +52,8 @@ def hash_file(filename: Path) -> str:
 def handle_error(
         error_message: str,
         show_level: int = logging.ERROR,
-        fatal: bool = False,                # Consider replacing fatal (boolean) with the logging error itself
-        error_code: int = 1,                # like decide to exist based on the logging error level
+        fatal: bool = False,
+        error_code: int = 1,
         hint: str = "") -> None:
     logger.log(show_level, error_message)
     if hint:
@@ -105,13 +94,12 @@ def get_default_def(name: str, path: str) -> Dict[str, Dict]:
 def init() -> str:
     if R2DIR.exists():
         handle_error(f"{R2DIR} already exists, exiting!", fatal=True)
-    mkdir(R2DIR)
-    mkdir(STORE)
-    mkdir(BIN)
+    R2DIR.mkdir(parents=True, exist_ok=True)
+    STORE.mkdir(parents=True, exist_ok=True)
+    BIN.mkdir(parents=True, exist_ok=True)
     file_overwrite(DEFS, json.dumps(get_default_def("defs", DEFS), indent=4))
     add_file("defs", DEFS)
     return f"Initiated in {R2DIR}"
-
 
 def load_defs() -> json:
     if verbose:
@@ -120,13 +108,15 @@ def load_defs() -> json:
         return json.loads(file_read(DEFS))
     handle_error("Definitions file not found", fatal=True, hint=f"Did you run {PATHNAME} --init first?")
 
-def add_file(name: str, path: Path) -> str: #TODO prevent adding existing file by checking hashes
-    path = Path(path).resolve()
+def add_file(name: str, path: Path) -> str:
     if not path.exists():
         handle_error(f"No such path: {path}", fatal=True)
     defs = load_defs()
     if name not in defs:
         defs.update(get_default_def(name, path))
+    else:
+        if diff(name, get_latest_gen(name)):
+            return f"Not added: {name} has not changed since last backup"
     defs = build_generation(defs)
     file_overwrite(DEFS, json.dumps(defs, indent=4))
     return f"Added {path} as {name}"
@@ -186,14 +176,14 @@ def multi_arg(arg_list: List[str]) -> Tuple[str, int]:
         handle_error("Too many arguments", fatal=True)
     return (filename, gen)
 
-def delete_file(filename: str) -> str:
+def remove_file(filename: str) -> str:
     defs = load_defs()
     if filename not in defs:
         handle_error(f"File does not exist: {filename}", fatal=True)
     del defs[filename]
     file_overwrite(DEFS, json.dumps(defs, indent=4))
     print(garbage_collect())
-    return f"Deleted {filename} from r2 backup system"
+    return f"Removed {filename}"
 
 def garbage_collect() -> str:
     defs = load_defs()
@@ -209,7 +199,7 @@ def garbage_collect() -> str:
 
     return f"Garbage collection complete. Deleted {deleted_count} unused file(s)."
 
-def quick_add(filename: str) -> str:
+def quick_add(filename: str) -> str: # TODO also need to prevent duplicates here
     path = Path.cwd() / filename
     if not path.exists():
         handle_error(f"No such file: {path}", fatal=True)
@@ -295,7 +285,7 @@ def status() -> str:
 def link_file(filename: str, target_path: str) -> str:
     defs = load_defs()
     if filename not in defs:
-        handle_error(f"File does not exist in r2: {filename}", fatal=True)
+        handle_error(f"File does not exist in {PATHNAME}: {filename}", fatal=True)
 
     target = Path(target_path).expanduser().resolve()
     if target.exists():
@@ -310,7 +300,7 @@ def link_file(filename: str, target_path: str) -> str:
 def install_file(filename: str) -> str:
     defs = load_defs()
     if filename not in defs:
-        handle_error(f"File does not exist in r2: {filename}", fatal=True)
+        handle_error(f"File does not exist in {PATHNAME}: {filename}", fatal=True)
 
     latest_gen = str(defs[filename]['latest'])
     source = get_file_at_gen(filename, int(latest_gen), defs)
@@ -325,22 +315,22 @@ def install_file(filename: str) -> str:
 
 def main() -> None:
     global verbose
-    parser = argparse.ArgumentParser(description="r2 backup system", epilog="")
+    parser = argparse.ArgumentParser(description=f"{PATHNAME} backup system", epilog="")
 
-    parser.add_argument('--init', action='store_true', help='Setup r2')
-    parser.add_argument('-a', '--add', nargs=2, type=str, metavar=('<name>', '<path>'), help="Add file to r2")
+    parser.add_argument('--init', action='store_true', help=f'Setup {PATHNAME}')
+    parser.add_argument('-a', '--add', nargs=2, type=str, metavar=('<name>', '<path>'), help=f"Add file to {PATHNAME}")
     parser.add_argument('-q', '--quick-add', nargs=1, type=str, metavar=('<file>'), help="Use filename as name")
     parser.add_argument('-d', '--diff', nargs='+', metavar='', help='<file> <generation> (default = latest)')
     parser.add_argument('-r', '--restore', nargs='+', metavar='', help='<file> <generation> (default = latest)')
     parser.add_argument('-n', '--no-backup-first', action='store_false', help="Don't backup before overwriting file with restore")
     parser.add_argument('-l', '--list-files', action='store_true', help="List backed up files")
-    parser.add_argument('--delete', nargs=1, type=str, metavar='<file>', help="Delete file from r2 backup system")
+    parser.add_argument('--remove', nargs=1, type=str, metavar='<file>', help=f"Remove file from {PATHNAME}")
     parser.add_argument('--gc', action='store_true', help="Run garbage collection")
     parser.add_argument('--history', nargs=1, type=str, metavar='<file>', help="List history of a file")
     parser.add_argument('--prune', nargs='?', const='all', metavar='<file>', help="Prune old generations of a file or all files")
     parser.add_argument('--status', action='store_true', help="Show status of all files")
     parser.add_argument('--link', nargs=2, type=str, metavar=('<file>', '<target>'), help="Link a file to a target location")
-    parser.add_argument('--install', nargs=1, type=str, metavar='<file>', help="Install a file to .r2/bin")
+    parser.add_argument('--install', nargs=1, type=str, metavar='<file>', help=f"Install a file to {BIN}")
     parser.add_argument('-v', '--verbose', action='store_true')
 
     args = parser.parse_args()
@@ -350,7 +340,7 @@ def main() -> None:
     if args.init:
         print(init())
     elif args.add:
-        print(add_file(args.add[0], args.add[1]))
+        print(add_file(args.add[0], Path(args.add[1])))
     elif args.quick_add:
         print(quick_add(args.quick_add[0]))
     elif args.list_files:
@@ -364,8 +354,8 @@ def main() -> None:
     elif args.restore:
         filename, gen = multi_arg(args.restore)
         print(restore(filename, gen, args.no_backup_first))
-    elif args.delete:
-        print(delete_file(args.delete[0]))
+    elif args.remove:
+        print(remove_file(args.delete[0]))
     elif args.gc:
         print(garbage_collect())
     elif args.history:
