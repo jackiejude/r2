@@ -260,7 +260,7 @@ def prune(filename: str, all_files: bool = False) -> str:
 def status() -> str:
     defs = load_defs()
     if not defs:
-        return "No files in the backup system."
+        handle_error("DEFS file not found", fatal=True, hint="Are there any backups?")
 
     name_width = max(len(name) for name in defs.keys())
     status_width = len("Source File Missing")
@@ -270,6 +270,8 @@ def status() -> str:
 
     status_list = [header, separator]
     for name, file_info in defs.items():
+        if name == "defs":
+            continue # exclude defs which is always changed
         path = Path(file_info['path'])
         if not path.exists():
             status = "Source File Missing"
