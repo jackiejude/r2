@@ -4,15 +4,24 @@
 ## Usage
 
 ```bash
-$ r2 --init
-
-$ r2 --add name path # backup file
-
-$ r2 -q file # quick add (uses filename as name)
-
-$ r2 -d file # check if file differs from backup
-
-$ r2 -r file 1 # restore file from backup
+-a, --add <name> <path>
+                    Add file to r2
+-q, --quick-add <file>
+                    Use filename as name
+-d, --diff  [ ...]    <file> <generation> (default = latest)
+-r, --restore  [ ...]
+                    <file> <generation> (default = latest)
+-n, --no-backup-first
+                    Don't backup before overwriting file with restore
+-l, --list-files      List backed up files
+--remove <file>       Remove file from r2
+--gc                  Run garbage collection
+--history <file>      List history of a file
+--prune [<file>]      Prune old generations of a file or all files
+--status              Show status of all files
+--link <file> <target>
+                    Link a file to a target location
+--install <file>      Install a file to ~/.r2/bin
 ```
 
 ## How it stores data
@@ -36,7 +45,7 @@ test
 ## TODO
 
 - [better handling of missing files](https://github.com/jackiejude/r2/issues/1)
-- --update command (update an already added files)
+- --update command (update an already added file)
 - --update-all
 - multiple storage locations
 - directory support
