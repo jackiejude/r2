@@ -182,7 +182,6 @@ def remove_file(filename: str) -> str:
         handle_error(f"File does not exist: {filename}", fatal=True)
     del defs[filename]
     file_overwrite(DEFS, json.dumps(defs, indent=4))
-    print(garbage_collect())
     return f"Removed {filename}"
 
 def garbage_collect() -> str:
