@@ -57,7 +57,7 @@ def handle_error(
         hint: str = "") -> None:
     logger.log(show_level, error_message)
     if hint:
-        print(f"\nHint: {hint}")            # Consider passing arbitrary text instead of a "Help: " message
+        print(f"\nHint: {hint}")
     if fatal:
         sys.exit(error_code)
 
@@ -278,7 +278,7 @@ def status() -> str:
         else:
             current_hash = hash_file(path)
             latest_gen = str(file_info['latest'])
-            latest_hash = file_info['generations'][latest_gen]    
+            latest_hash = file_info['generations'][latest_gen]
             status = "Not Changed" if current_hash == latest_hash else "Changed"
         status_list.append(f"| {name:<{name_width}} | {status:<{status_width}} |")
 
@@ -357,7 +357,7 @@ def main() -> None:
         filename, gen = multi_arg(args.restore)
         print(restore(filename, gen, args.no_backup_first))
     elif args.remove:
-        print(remove_file(args.delete[0]))
+        print(remove_file(args.remove[0]))
     elif args.gc:
         print(garbage_collect())
     elif args.history:
