@@ -121,6 +121,17 @@ def add_file(name: str, path: Path) -> str:
     file_overwrite(DEFS, json.dumps(defs, indent=4))
     return f"Added {path} as {name}"
 
+def update(name: str) -> str:
+    defs = load_defs()
+    if name not in defs:
+        handle_error(f"Cannot update {name}, file not in {PATHNAME}", fatal=True, hint="Try --add for new files")
+    else:
+        if diff(name, get_latest_gen(name)):
+            handle_error(f"Cannot update {name}, file not changed since last backup", fatal=True)
+    defs = build_generation(defs)
+    file_overwrite(DEFS, json.dumps(defs, indent=4))
+    return f"Updated {name}"
+
 def get_latest_gen(filename: str) -> int:
     defs = load_defs()
     if filename not in defs:
@@ -222,8 +233,8 @@ def list_file_history(filename: str) -> str:
 
     file_info = defs[filename]
     history = [f"File: {filename}", f"Path: {file_info['path']}", ""]
-    history.append("| Generation | Hash |")
-    history.append("|------------|------|")
+    history.append("| Generation |                               Hash                               |")
+    history.append("|------------|------------------------------------------------------------------|")
 
     for gen, hash_value in sorted(file_info['generations'].items(), key=lambda x: int(x[0])):
         history.append(f"| {gen:^10} | {hash_value} |")
@@ -325,6 +336,7 @@ def main() -> None:
     parser.add_argument('-r', '--restore', nargs='+', metavar='', help='<file> <generation> (default = latest)')
     parser.add_argument('-n', '--no-backup-first', action='store_false', help="Don't backup before overwriting file with restore")
     parser.add_argument('-l', '--list-files', action='store_true', help="List backed up files")
+    parser.add_argument('-u', '--update', nargs=1, type=str, metavar=('<file>'), help="Update file")
     parser.add_argument('--remove', nargs=1, type=str, metavar='<file>', help=f"Remove file from {PATHNAME}")
     parser.add_argument('--gc', action='store_true', help="Run garbage collection")
     parser.add_argument('--history', nargs=1, type=str, metavar='<file>', help="List history of a file")
@@ -372,6 +384,8 @@ def main() -> None:
         print(link_file(args.link[0], args.link[1]))
     elif args.install:
         print(install_file(args.install[0]))
+    elif args.update:
+        print(update(args.update[0]))
     else:
         parser.print_help()
 

@@ -34,5 +34,5 @@ files are listed in `~/.r2/defs.json:`
 
 ## TODO
 
-- [ ] update command (update an already added file)
+- [ ] fix issue where hashes are duplicated in defs.json
 - [ ] ability to update files in symlinks and bin
