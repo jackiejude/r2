@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import json
 import shutil
@@ -40,8 +41,6 @@ def file_read(filename: Path) -> str:
         return f.read()
 
 def hash_file(filename: Path) -> str:
-    if verbose:
-        print(f"Creating hash of file {filename}")
     hasher = hashlib.sha256()
     block_size = 65536
     with open(filename, 'rb') as file:
@@ -72,11 +71,19 @@ def build_generation(defs: Dict[str, Dict]) -> Dict[str, Dict]:
             handle_error(f"File not found: {path}", show_level=logging.WARNING)
             continue
         hash_value = hash_file(path)
+        try:
+            old_hash = get_file_at_gen(name, int(file_info['latest']), defs).name
+        except KeyError:
+            old_hash = ""
+        if hash_value == old_hash: # Skip files that haven't changed
+            if verbose:
+                print(f"Skipping {name}: file not changed")
+            continue
         new_gen = int(file_info['latest']) + 1
         file_info['latest'] = new_gen
         file_info['generations'][new_gen] = hash_value
         store_location = STORE / hash_value
-        if not store_location.exists(): # TODO if file hasn't changed, it shouldn't create a new generation at all!
+        if not store_location.exists():
             if verbose:
                 print(f"Copying file {path} to store location {store_location}")
             shutil.copy2(path, store_location)
@@ -98,7 +105,7 @@ def init() -> str:
     STORE.mkdir(parents=True, exist_ok=True)
     BIN.mkdir(parents=True, exist_ok=True)
     file_overwrite(DEFS, json.dumps(get_default_def("defs", DEFS), indent=4))
-    add_file("defs", DEFS)
+    add_file("defs", DEFS, init=True)
     return f"Initiated in {R2DIR}"
 
 def load_defs() -> json:
@@ -108,11 +115,11 @@ def load_defs() -> json:
         return json.loads(file_read(DEFS))
     handle_error("Definitions file not found", fatal=True, hint=f"Did you run {PATHNAME} --init first?")
 
-def add_file(name: str, path: Path) -> str:
+def add_file(name: str, path: Path, init: bool = False) -> str:
     if not path.exists():
         handle_error(f"No such path: {path}", fatal=True)
     defs = load_defs()
-    if name not in defs:
+    if name not in defs or init:
         defs.update(get_default_def(name, path))
     else:
         if diff(name, get_latest_gen(name)):
@@ -162,6 +169,7 @@ def list_files() -> str:
         return "No files in the backup system."
 
     name_width = max(len(name) for name in defs.keys())
+    name_width = max (name_width, 8)
     path_width = max(len(info['path']) for info in defs.values())
 
     header = f"| {'Filename':<{name_width}} | {'Path':<{path_width}} |"
@@ -273,6 +281,7 @@ def status() -> str:
         handle_error("DEFS file not found", fatal=True, hint="Are there any backups?")
 
     name_width = max(len(name) for name in defs.keys())
+    name_width = max (name_width, 8)
     status_width = len("Source File Missing")
 
     header = f"| {'Filename':<{name_width}} | {'Status':<{status_width}} |"
@@ -301,7 +310,10 @@ def link_file(filename: str, target_path: str) -> str:
 
     target = Path(target_path).expanduser().resolve()
     if target.exists():
-        handle_error(f"Target path already exists: {target}", fatal=True)
+        if target.is_symlink():
+            os.unlink(target)
+        else:
+            handle_error(f"Target path already exists: {target}", fatal=True)
 
     latest_gen = str(defs[filename]['latest'])
     source = get_file_at_gen(filename, int(latest_gen), defs)
@@ -318,8 +330,8 @@ def install_file(filename: str) -> str:
     source = get_file_at_gen(filename, int(latest_gen), defs)
     target = BIN / filename
 
-    if target.exists():
-        handle_error(f"File already exists in bin: {target}", fatal=True)
+    if target.exists() and target.is_symlink():
+        os.unlink(target)
 
     target.symlink_to(source)
     target.chmod(target.stat().st_mode | 0o111)  # Make executable
